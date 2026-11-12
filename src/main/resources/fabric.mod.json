@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "spawnsight",
+	"version": "${version}",
+	"name": "Spawnsight",
+	"description": "Client-side mob spawn planner: shows on which blocks hostile and passive mobs can spawn, explains why or why not, and draws the 24/32/128-block spawn and despawn spheres. Exact in singleplayer; vanilla spawn tables on servers.",
+	"authors": [
+		"Skaffa",
+		"Claude (Anthropic)"
+	],
+	"contact": {
+		"homepage": "https://github.com/skaffa/spawnsight",
+		"sources": "https://github.com/skaffa/spawnsight",
+		"issues": "https://github.com/skaffa/spawnsight/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/spawnsight/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.spawnsight.client.SpawnsightClient"
+		],
+		"modmenu": [
+			"dev.spawnsight.client.ModMenuIntegration"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}
