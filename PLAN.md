@@ -270,7 +270,13 @@ machine shared with another session's Minecraft client and server, so wall times
 - Memory: 4 KB per section with colour (164 KB at radius 32), nothing for empty sections.
 - Exactness: the client result equals the same rules run on the server level for all 9186 candidates.
   A torch updates the overlay after 8-21 ticks (4-tick debounce plus queue).
-- Open for M3: a full fill at radius 32 takes 10-25 s wall. Options: a larger budget while the queue is
+**M3 (2026-11-12):** view-first ordering and 3x budget while more than 16 sections wait: radius 32
+fill 6.0 s wall, 515 ms CPU, 4.4 ms CPU per working tick while filling. Overlay drawing (custom geometry,
+`RenderTypes.debugQuads()`, per-section index lists): 1.1 ms per frame for 844 quads, measured over only
+17 frames at about 8 fps on the overloaded machine; this is at the 1 ms stop limit and must be measured
+again on an idle machine (M5), with per-section frustum culling or cached GPU buffers as the next steps.
+
+- Before M3: a full fill at radius 32 took 10-25 s wall. Options: a larger budget while the queue is
   long and the player stands still, nearest-to-view-first ordering, and fewer checks per candidate.
 
 ## 10. Testing
@@ -302,7 +308,7 @@ machine shared with another session's Minecraft client and server, so wall times
   sync and slime size in-game.
 - **M2 Scanner + sources** (done 2026-11-12, numbers in §9): client probe, ServerPeek (exact singleplayer), section cache, dirty tracking
   (block + light updates), tick budget. Measure numbers.
-- **M3 Overlay and UI**: section meshes, red/yellow/green, hatched near-player variant, spheres, HUD
+- **M3 Overlay and UI** (done 2026-11-12): section meshes, red/yellow/green, hatched near-player variant, spheres, HUD
   line, "why" panel, farm filter. Screenshots.
 - **M4 Multiplayer**: TableSource, `/spawnsight seed`, uncertainty labels, fortress heuristic; test on
   run-server.

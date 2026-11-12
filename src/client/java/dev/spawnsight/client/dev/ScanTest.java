@@ -64,8 +64,9 @@ final class ScanTest {
 			// processes and GC on a busy machine (both logged above)
 			Scanner.Stats st = Scanner.STATS;
 			double avgCpu = st.workTicks == 0 ? 0 : st.cpuNanos / 1e6 / st.workTicks;
-			SelfTest.check(avgCpu <= SpawnsightClient.config.scanBudgetMs + 1.0, String.format(Locale.ROOT,
-					"scanner stays within the %d ms budget: %.2f ms CPU per working tick over %d ticks", SpawnsightClient.config.scanBudgetMs, avgCpu,
+			// up to 3x the budget while catching up on a long queue (Scanner)
+			SelfTest.check(avgCpu <= 3 * SpawnsightClient.config.scanBudgetMs + 1.0, String.format(Locale.ROOT,
+					"scanner stays within 3x the %d ms budget while filling: %.2f ms CPU per working tick over %d ticks", SpawnsightClient.config.scanBudgetMs, avgCpu,
 					st.workTicks));
 			SelfTest.check(st.cpuNanos < 1_500_000_000L, String.format(Locale.ROOT, "radius 32 fill costs %d ms CPU in total (limit 1500)",
 					st.cpuNanos / 1_000_000));

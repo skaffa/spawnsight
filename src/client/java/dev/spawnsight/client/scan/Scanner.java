@@ -223,6 +223,7 @@ public final class Scanner {
 		applyDirtyEvents(level);
 
 		BlockPos center = mc.player.blockPosition();
+		net.minecraft.world.phys.Vec3 look = mc.player.getLookAngle();
 		int r = c.radius;
 		int scx = SectionPos.blockToSectionCoord(center.getX());
 		int scy = SectionPos.blockToSectionCoord(center.getY());
@@ -245,7 +246,12 @@ public final class Scanner {
 						long dx = sx - scx;
 						long dy = sy - scy;
 						long dz = sz - scz;
-						work.add(new long[] {dx * dx + dy * dy + dz * dz, key});
+						long d2 = dx * dx + dy * dy + dz * dz;
+						// sections in front of the camera first: behind counts as up to 2.5x farther
+						double len = Math.sqrt(d2);
+						double dot = len == 0 ? 1 : (dx * look.x + dy * look.y + dz * look.z) / len;
+						long prio = Math.round(d2 * 16 * (1.75 - 0.75 * dot));
+						work.add(new long[] {prio, key});
 					}
 				}
 			}
@@ -253,7 +259,8 @@ public final class Scanner {
 		CACHE.keySet().removeIf(k -> !keep.contains(k));
 		work.sort((a, b) -> Long.compare(a[0], b[0]));
 
-		long budget = c.scanBudgetMs * 1_000_000L;
+		// while a lot is waiting (joining, turning the overlay on, a time change) spend up to 3x the budget
+		long budget = c.scanBudgetMs * 1_000_000L * (STATS.queue > 16 ? 3 : 1);
 		int waiting = 0;
 		int done = 0;
 		int next = 0;

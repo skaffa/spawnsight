@@ -4,6 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 
 import dev.spawnsight.client.dev.SelfTest;
+import dev.spawnsight.client.render.OverlayRenderer;
+import dev.spawnsight.client.render.SpawnHud;
+import dev.spawnsight.client.render.SphereRenderer;
 import dev.spawnsight.client.scan.Scanner;
 import dev.spawnsight.core.config.ConfigStore;
 import dev.spawnsight.core.config.SpawnsightConfig;
@@ -13,7 +16,13 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -58,6 +67,8 @@ public final class SpawnsightClient implements ClientModInitializer {
 		spheresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.spawnsight.spheres", InputConstants.KEY_Y, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(SpawnsightClient::tick);
+		LevelRenderEvents.COLLECT_SUBMITS.register(OverlayRenderer::render);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, Identifier.fromNamespaceAndPath(MOD_ID, "hud"), SpawnHud::render);
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> dispatcher.register(
 				ClientCommands.literal(MOD_ID)
 						.executes(ctx -> {
@@ -78,9 +89,30 @@ public final class SpawnsightClient implements ClientModInitializer {
 								ctx.getSource().sendError(Component.literal("[Spawnsight] Look at a block first"));
 								return 0;
 							}
-							Why.explain(mc, pos).forEach(ctx.getSource()::sendFeedback);
+							Why.explain(mc, Why.evaluate(mc, pos)).forEach(ctx.getSource()::sendFeedback);
 							return 1;
 						}))
+						.then(ClientCommands.literal("mob")
+								.then(ClientCommands.literal("all").executes(ctx -> {
+									config.mobFilter = null;
+									save();
+									ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Showing every mob"));
+									return 1;
+								}))
+								.then(ClientCommands.argument("entity", IdentifierArgument.id())
+										.suggests((ctx, b) -> SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), b))
+										.executes(ctx -> {
+											Identifier id = ctx.getArgument("entity", Identifier.class);
+											if (!BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
+												ctx.getSource().sendError(Component.literal("[Spawnsight] Unknown entity " + id));
+												return 0;
+											}
+											config.mobFilter = id.toString();
+											save();
+											ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Farm mode: only where " + id.getPath()
+													+ " can spawn (/spawnsight mob all to undo)"));
+											return 1;
+										})))
 						.then(ClientCommands.literal("stats").executes(ctx -> {
 							for (String line : stats()) {
 								ctx.getSource().sendFeedback(Component.literal(line));
@@ -105,6 +137,8 @@ public final class SpawnsightClient implements ClientModInitializer {
 	private static void tick(Minecraft mc) {
 		SelfTest.tick(mc);
 		Scanner.tick(mc);
+		SphereRenderer.tick(mc);
+		SpawnHud.tick(mc);
 		while (overlayKey.consumeClick()) {
 			toggleOverlay(mc);
 		}
@@ -115,8 +149,9 @@ public final class SpawnsightClient implements ClientModInitializer {
 		}
 		while (whyKey.consumeClick()) {
 			BlockPos pos = Why.aimed(mc);
-			if (pos != null && mc.player != null) {
-				Why.explain(mc, pos).forEach(mc.player::sendSystemMessage);
+			SpawnHud.panel = !SpawnHud.panel;
+			if (SpawnHud.panel && !config.overlay) {
+				message(mc, "Turn the overlay on (key U) to see why");
 			}
 		}
 	}
@@ -150,9 +185,10 @@ public final class SpawnsightClient implements ClientModInitializer {
 		return List.of(
 				"[Spawnsight] Shows where mobs can spawn and why.",
 				"  " + overlayKey.getTranslatedKeyMessage().getString() + " or /spawnsight: overlay on/off",
-				"  " + whyKey.getTranslatedKeyMessage().getString() + ": explain the block you look at",
+				"  " + whyKey.getTranslatedKeyMessage().getString() + ": panel explaining the block you look at",
 				"  " + spheresKey.getTranslatedKeyMessage().getString() + ": spawn/despawn spheres (24, 32, 128)",
 				"  /spawnsight why: explain the block you look at, in chat",
+				"  /spawnsight mob <entity>|all: farm mode, show only one mob",
 				"  /spawnsight stats: scanner numbers",
 				"  /spawnsight radius <4-64>: scan radius",
 				"  /spawnsight config: settings",
