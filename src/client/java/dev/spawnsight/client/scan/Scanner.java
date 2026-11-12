@@ -70,6 +70,7 @@ public final class Scanner {
 	private static Env lastEnv;
 	private static String lastSettings;
 	private static LevelWorld world;
+	private static Long worldSeed;
 	/** Ticks since start, for the dirty debounce. */
 	private static long ticks;
 	/** Wait this many ticks after a block/light change before recomputing (more changes usually follow). */
@@ -206,9 +207,10 @@ public final class Scanner {
 		long cpu0 = CPU.getCurrentThreadCpuTime();
 		table();
 		boolean sp = ServerLists.available();
-		Long seed = sp ? SERVER.seed() : null;
-		if (world == null || sp && seed != null && world.slimeChunk(0, 0) == null) {
+		Long seed = sp ? SERVER.seed() : SpawnsightClient.serverSeed(mc);
+		if (world == null || !java.util.Objects.equals(seed, worldSeed)) {
 			world = new LevelWorld(level, seed);
+			worldSeed = seed;
 		}
 		Env env = Envs.of(level, table(), sp ? SERVER.surfaceSlimeChance() : Float.NaN);
 		String settings = c.radius + "|" + c.showPassive + "|" + c.mobFilter + "|" + seed;

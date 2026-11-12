@@ -310,7 +310,9 @@ again on an idle machine (M5), with per-section frustum culling or cached GPU bu
   (block + light updates), tick budget. Measure numbers.
 - **M3 Overlay and UI** (done 2026-11-12): section meshes, red/yellow/green, hatched near-player variant, spheres, HUD
   line, "why" panel, farm filter. Screenshots.
-- **M4 Multiplayer**: TableSource, `/spawnsight seed`, uncertainty labels, fortress heuristic; test on
+- **M4 Multiplayer** (done 2026-11-12: `-Pselftest=m4` on run-server; seeds in `config/spawnsight/seeds.json`
+  by server address; the fortress list is assumed on nether bricks in the nether; HUD tag "[vanilla tables]",
+  panel notes and a chat note on join): TableSource, `/spawnsight seed`, uncertainty labels, fortress heuristic; test on
   run-server.
 - **M5 Self-test**: rig, exact comparison, natural-spawn check, table-mode check; all PASS.
 - **M6 Release prep**: README, CHANGELOG, `media/modrinth-description.md`, gallery 1600x900 +

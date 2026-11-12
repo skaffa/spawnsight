@@ -9,6 +9,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
 
 import java.util.BitSet;
 import java.util.HashMap;
@@ -38,9 +39,14 @@ public final class TableLists {
 		int bz = SectionPos.sectionToBlockCoord(SectionPos.z(section));
 		BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
 		Map<Integer, List<SpawnEntry>[]> out = new HashMap<>();
+		boolean nether = level.dimension() == Level.NETHER;
 		for (int i = candidates.nextSetBit(0); i >= 0; i = candidates.nextSetBit(i + 1)) {
 			p.set(bx + (i & 15), by + (i >> 8), bz + ((i >> 4) & 15));
-			out.put(i, lists(level.getBiome(p)));
+			List<SpawnEntry>[] l = lists(level.getBiome(p));
+			if (nether && fortressAssumed(level, p)) {
+				l = fortress(l);
+			}
+			out.put(i, l);
 		}
 		return new SectionLists(out, (BitSet) candidates.clone(), SectionLists.Origin.TABLE);
 	}
@@ -59,5 +65,28 @@ public final class TableLists {
 
 	public void clear() {
 		byBiome.clear();
+		fortressByBiome.clear();
+	}
+
+	/**
+	 * The fortress rule without structure data: vanilla uses the fortress list for monsters standing on
+	 * nether bricks inside a fortress; on a server Spawnsight assumes nether bricks in the nether are one.
+	 */
+	public static boolean fortressAssumed(Level level, BlockPos spawnPos) {
+		return level.dimension() == Level.NETHER && level.getBlockState(spawnPos.below()).is(Blocks.NETHER_BRICKS);
+	}
+
+	private final Map<List<SpawnEntry>[], List<SpawnEntry>[]> fortressByBiome = new IdentityHashMap<>();
+
+	@SuppressWarnings("unchecked")
+	private List<SpawnEntry>[] fortress(List<SpawnEntry>[] biome) {
+		return fortressByBiome.computeIfAbsent(biome, b -> {
+			List<SpawnEntry>[] arr = b.clone();
+			var override = table.structures.getOrDefault("minecraft:fortress", Map.of()).get(Category.MONSTER.id());
+			if (override != null) {
+				arr[Category.MONSTER.ordinal()] = override.spawns();
+			}
+			return arr;
+		});
 	}
 }

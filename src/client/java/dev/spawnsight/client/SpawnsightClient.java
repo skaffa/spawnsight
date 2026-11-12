@@ -2,6 +2,7 @@ package dev.spawnsight.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 
 import dev.spawnsight.client.dev.SelfTest;
 import dev.spawnsight.client.render.OverlayRenderer;
@@ -9,6 +10,7 @@ import dev.spawnsight.client.render.SpawnHud;
 import dev.spawnsight.client.render.SphereRenderer;
 import dev.spawnsight.client.scan.Scanner;
 import dev.spawnsight.core.config.ConfigStore;
+import dev.spawnsight.core.config.SeedStore;
 import dev.spawnsight.core.config.SpawnsightConfig;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -16,6 +18,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -44,6 +47,8 @@ public final class SpawnsightClient implements ClientModInitializer {
 	/** All Spawnsight files live in their own folder: {@code config/spawnsight/}. */
 	public static final ConfigStore STORE = new ConfigStore(FabricLoader.getInstance().getConfigDir().resolve(MOD_ID));
 	public static SpawnsightConfig config = new SpawnsightConfig();
+	/** Seeds entered for servers ({@code /spawnsight seed}), for slime chunks. */
+	public static final SeedStore SEEDS = new SeedStore(FabricLoader.getInstance().getConfigDir().resolve(MOD_ID));
 
 	private static KeyMapping overlayKey;
 	private static KeyMapping whyKey;
@@ -60,6 +65,12 @@ public final class SpawnsightClient implements ClientModInitializer {
 			LOG.warn("Could not load {}; using defaults", STORE.file(), e);
 		}
 
+		try {
+			SEEDS.load();
+		} catch (IOException e) {
+			LOG.warn("Could not load {}", SEEDS.file(), e);
+		}
+
 		// U, I and Y have no vanilla 26.3 default; H is used by Vire and Ortho, J N M B K V by Vire.
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
 		overlayKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.spawnsight.overlay", InputConstants.KEY_U, category));
@@ -67,6 +78,13 @@ public final class SpawnsightClient implements ClientModInitializer {
 		spheresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.spawnsight.spheres", InputConstants.KEY_Y, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(SpawnsightClient::tick);
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> mc.execute(() -> {
+			if (config.overlay && serverAddress(mc) != null && mc.player != null) {
+				mc.player.sendSystemMessage(Component.literal("[Spawnsight] On a server Spawnsight uses the vanilla 26.3 spawn tables: data packs "
+						+ "and server plugins can change spawns, structure spawns are not known"
+						+ (serverSeed(mc) == null ? ", and slime chunks need /spawnsight seed <seed>." : ".")).withStyle(net.minecraft.ChatFormatting.GRAY));
+			}
+		}));
 		LevelRenderEvents.COLLECT_SUBMITS.register(OverlayRenderer::render);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, Identifier.fromNamespaceAndPath(MOD_ID, "hud"), SpawnHud::render);
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> dispatcher.register(
@@ -92,6 +110,51 @@ public final class SpawnsightClient implements ClientModInitializer {
 							Why.explain(mc, Why.evaluate(mc, pos)).forEach(ctx.getSource()::sendFeedback);
 							return 1;
 						}))
+						.then(ClientCommands.literal("seed")
+								.executes(ctx -> {
+									Minecraft mc = Minecraft.getInstance();
+									String server = serverAddress(mc);
+									if (server == null) {
+										ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Singleplayer: the seed is read from the world"));
+									} else {
+										Long seed = SEEDS.get(server);
+										ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Seed for " + server + ": "
+												+ (seed == null ? "not set (slime chunks unknown). /spawnsight seed <seed>" : seed)));
+									}
+									return 1;
+								})
+								.then(ClientCommands.literal("clear").executes(ctx -> {
+									String server = serverAddress(Minecraft.getInstance());
+									if (server != null) {
+										try {
+											SEEDS.remove(server);
+										} catch (IOException e) {
+											LOG.warn("Could not save {}", SEEDS.file(), e);
+										}
+									}
+									ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Seed cleared: slime chunks are unknown again"));
+									return 1;
+								}))
+								.then(ClientCommands.argument("seed", StringArgumentType.greedyString()).executes(ctx -> {
+									Minecraft mc = Minecraft.getInstance();
+									String server = serverAddress(mc);
+									if (server == null) {
+										ctx.getSource().sendError(Component.literal("[Spawnsight] Only needed on servers; singleplayer reads the seed itself"));
+										return 0;
+									}
+									Long seed = SeedStore.parse(StringArgumentType.getString(ctx, "seed"));
+									if (seed == null) {
+										return 0;
+									}
+									try {
+										SEEDS.put(server, seed);
+									} catch (IOException e) {
+										LOG.warn("Could not save {}", SEEDS.file(), e);
+									}
+									ctx.getSource().sendFeedback(Component.literal("[Spawnsight] Seed " + seed + " saved for " + server
+											+ ": slime chunks are now shown. A wrong seed gives wrong slime chunks."));
+									return 1;
+								})))
 						.then(ClientCommands.literal("mob")
 								.then(ClientCommands.literal("all").executes(ctx -> {
 									config.mobFilter = null;
@@ -189,10 +252,25 @@ public final class SpawnsightClient implements ClientModInitializer {
 				"  " + spheresKey.getTranslatedKeyMessage().getString() + ": spawn/despawn spheres (24, 32, 128)",
 				"  /spawnsight why: explain the block you look at, in chat",
 				"  /spawnsight mob <entity>|all: farm mode, show only one mob",
+				"  /spawnsight seed <seed>|clear: world seed on a server, for slime chunks",
 				"  /spawnsight stats: scanner numbers",
 				"  /spawnsight radius <4-64>: scan radius",
 				"  /spawnsight config: settings",
 				"  /spawnsight help: this list");
+	}
+
+	/** The address of the server we play on, or null in singleplayer / LAN host. */
+	public static String serverAddress(Minecraft mc) {
+		if (mc.hasSingleplayerServer() || mc.getCurrentServer() == null) {
+			return null;
+		}
+		return mc.getCurrentServer().ip;
+	}
+
+	/** Seed for slime chunks on the current server, or null. */
+	public static Long serverSeed(Minecraft mc) {
+		String a = serverAddress(mc);
+		return a == null ? null : SEEDS.get(a);
 	}
 
 	public static void save() {

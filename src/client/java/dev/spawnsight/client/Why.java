@@ -3,6 +3,7 @@ package dev.spawnsight.client;
 import dev.spawnsight.client.probe.Mobs;
 import dev.spawnsight.client.scan.Scanner;
 import dev.spawnsight.client.source.SectionLists;
+import dev.spawnsight.client.source.TableLists;
 import dev.spawnsight.core.rules.Category;
 import dev.spawnsight.core.rules.Env;
 import dev.spawnsight.core.rules.SpotEvaluator;
@@ -91,6 +92,9 @@ public final class Why {
 		} else {
 			out.append(Component.literal("no hostile spawn: " + firstReason(r.spot)).withStyle(ChatFormatting.GRAY));
 		}
+		if (r.origin == SectionLists.Origin.TABLE) {
+			out.append(Component.literal("  [vanilla tables]").withStyle(ChatFormatting.DARK_GRAY));
+		}
 		if (!passive.isEmpty() && now.isEmpty() && later.isEmpty()) {
 			out.append(Component.literal("  (" + names(passive) + " can)").withStyle(ChatFormatting.GREEN));
 		}
@@ -112,7 +116,14 @@ public final class Why {
 				r.origin == SectionLists.Origin.SERVER ? "exact, from the integrated server" : "vanilla tables; data packs and plugins may differ"))
 				.withStyle(ChatFormatting.GRAY));
 		if (r.origin == SectionLists.Origin.TABLE) {
-			out.add(Component.literal("  structure spawns (witch huts, monuments, outposts, fortresses) are not known here").withStyle(ChatFormatting.DARK_GRAY));
+			if (TableLists.fortressAssumed(mc.level, r.pos)) {
+				out.add(Component.literal("  nether bricks below: assumed to be a fortress (blazes, wither skeletons...)").withStyle(ChatFormatting.DARK_GRAY));
+			} else {
+				out.add(Component.literal("  structure spawns (witch huts, monuments, outposts) are not known on servers").withStyle(ChatFormatting.DARK_GRAY));
+			}
+			if (SpawnsightClient.serverSeed(mc) == null) {
+				out.add(Component.literal("  slime chunks unknown: /spawnsight seed <seed>").withStyle(ChatFormatting.DARK_GRAY));
+			}
 		}
 		if (r.noMonsterList) {
 			out.add(Component.literal("  no monsters in the spawn list here").withStyle(ChatFormatting.GREEN));
