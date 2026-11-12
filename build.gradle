@@ -61,7 +61,23 @@ dependencies {
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
+// Vanilla spawn tables for servers (PLAN.md §7): read from the 26.3 game jar's built-in data pack by
+// core.table.SpawnTableBuilder (Minecraft-free core code, so it runs right after compileJava).
+def spawnTableDir = layout.buildDirectory.dir("generated/spawntable")
+def spawnTableFile = spawnTableDir.map { it.file("spawnsight/spawn_table.json") }
+def minecraftJar = sourceSets.main.compileClasspath.filter { it.name.startsWith("minecraft-common") && !it.name.contains("sources") }
+def mcVersion = project.minecraft_version
+def genSpawnTable = tasks.register("genSpawnTable", JavaExec) {
+	dependsOn tasks.named("compileJava")
+	classpath = files(sourceSets.main.java.classesDirectory) + sourceSets.main.compileClasspath
+	mainClass = "dev.spawnsight.core.table.SpawnTableBuilder"
+	inputs.files(minecraftJar)
+	outputs.dir(spawnTableDir)
+	argumentProviders.add({ [minecraftJar.singleFile.absolutePath, spawnTableFile.get().asFile.absolutePath, mcVersion] } as CommandLineArgumentProvider)
+}
+
 processResources {
+	from(genSpawnTable)
 	def version = project.version
 	inputs.property "version", version
 

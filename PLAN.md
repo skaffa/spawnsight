@@ -90,8 +90,8 @@ Default: `isFaceSturdy(UP)` **and** `lightEmission < 14`. Overrides in `Blocks`:
 
 Notation: `L_sky` = sky light at `pos`, `L_blk` = block light, `raw(d)` =
 `max(L_sky - d, L_blk)` (`getMaxLocalRawBrightness(pos, d)`), `darken` = `level.getSkyDarken()`
-= `15 - gameplay/sky_light_level` (overworld day timeline: 15 by day, 15 x 0.2667 = 4 by night, so darken
-0..11). Random draws are written as probabilities.
+= `15 - gameplay/sky_light_level`. Measured on the client (M1 self-test): clear day 0, full rain by day 3,
+full thunderstorm by day 5, every night 11. Random draws are written as probabilities.
 
 ### 3.1 Monsters: `Monster.isDarkEnoughToSpawn`
 1. `L_sky > nextInt(32)` fails: passes with chance `(32 - L_sky) / 32` (never certain on the surface by
@@ -147,9 +147,13 @@ mob spawners, zombie reinforcements. The "why" panel names them as "not a natura
 ### 3.4 Instance checks after creation (`isValidPositionForMob`)
 - `PathfinderMob.checkSpawnRules`: `getWalkTargetValue(pos) ≥ 0`.
   - `Monster`: `-(lightMagic(pos) - 0.5) ≥ 0`, with
-    `lightMagic = lerp(ambient_light, v/(4-3v), 1)`, `v = raw(darken)/15`. Overworld (ambient 0): raw ≤ 12;
-    nether (0.1): raw ≤ 11; end (0.25): raw ≤ 10. Redundant with §3.1 in the overworld and nether.
-    In the end it matters for monsters without an override.
+    `lightMagic = lerp(ambient_light, v/(4-3v), 1)`, `v = raw(darken)/15`, in float. Overworld (ambient 0):
+    raw ≤ 11 (12 gives 0.50000006); nether (0.1): raw ≤ 11; end (0.25): raw ≤ 10. Redundant with §3.1 in
+    the overworld and nether. In the end it matters for monsters without an override.
+  - **Zombie horse and camel husk** are `AbstractHorse`/`Camel` (Animal) subclasses: they use the
+    *animal* walk target (10 on grass blocks, else needs raw ≥ 12) together with monster darkness rules.
+    Off grass both can never hold at once, so camel husks never spawn naturally on desert sand and
+    zombie horses only on grass blocks. Spawnsight reports this as "never all at once".
   - Overrides: enderman and pillager return 0 (always ok); silverfish 10 on infestable blocks; guardian
     10 + light cost in water; animals 10 on grass, else the light formula; hoglin −1 near warped fungus /
     repellents; strider 10 in lava.
@@ -162,8 +166,9 @@ mob spawners, zombie reinforcements. The "why" panel names them as "not a natura
 0.9, enderman 0.6 x 2.9, zombie 0.6 x 1.95, slime by size...) centred on the block, tested against real
 collision shapes. A spider therefore needs the 3x3 area around the block free of collision at its height;
 an enderman needs 3 blocks of collision-free space. Spawnsight calls the same method on the client
-`Level`, so slabs, fences, carpets etc. are exact. Slime size at the check: verify in M1 (size is set in
-`finalizeSpawn`, after the checks).
+`Level`, so slabs, fences, carpets etc. are exact. Slimes and magma cubes have `spawnDimensionsScale(4)`:
+their spawn box is 2.08 x 2.08 (sulfur cube: 2x, 0.98); the liquid check uses the new mob's 0.52 box
+(size 1, checked in M1).
 
 ## 5. Distance and spheres
 - No spawn within **24 blocks** (distance² > 576, from block-bottom-centre to the nearest player's feet)
@@ -203,7 +208,7 @@ The "why" panel lists every candidate with its chance factors (e.g. "zombie: sky
 | Biome per block | yes | chunk biome data |
 | Biome spawn lists `gameplay/natural_mob_spawns` | **no** | not `syncable()`; `Biome.NETWORK_CODEC` filters to syncable attributes and drops generation settings |
 | `gameplay/surface_slime_spawn_chance` | **no** | not syncable (derived from moon phase with the vanilla moon timeline) |
-| Biome tags | probably yes | tag sync for synced registries: verify in M1 |
+| Biome tags | yes | checked in M1: swamp has `#allows_surface_slime_spawns` on the client |
 | Structure starts/pieces | **no** | server only |
 | World seed (slime chunks) | **no** | server only |
 | Mob caps, spawn potential, entity-ticking chunks, gamerules | no | server only |
@@ -272,7 +277,7 @@ and 32, memory per section. Stop and report if radius 32 costs more than 1 ms pe
 - **M0 Skeleton**: repo (`main`), Loom/Fabric versions from COMMON.md, `fabric.mod.json` (client),
   ConfigStore + tests, keys, `/spawnsight help|config`, settings screen + Mod Menu, CI workflow, icon
   script. Build passes, runClient loads.
-- **M1 Rule engine**: `core/rules` with all §2–§5 rules, chance maths, unit tests on the fake grid.
+- **M1 Rule engine** (done 2026-11-12): `core/rules` with all §2–§5 rules, chance maths, unit tests on the fake grid.
   Spawn table generator (Gradle task reading the 26.3 jar's data pack) + lookup tests. Verify biome tag
   sync and slime size in-game.
 - **M2 Scanner + sources**: client probe, ServerPeek (exact singleplayer), section cache, dirty tracking

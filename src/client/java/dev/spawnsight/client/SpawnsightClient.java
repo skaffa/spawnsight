@@ -3,6 +3,7 @@ package dev.spawnsight.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 
+import dev.spawnsight.client.dev.SelfTest;
 import dev.spawnsight.core.config.ConfigStore;
 import dev.spawnsight.core.config.SpawnsightConfig;
 
@@ -78,10 +79,12 @@ public final class SpawnsightClient implements ClientModInitializer {
 							}
 							return 1;
 						}))));
+		SelfTest.init();
 		LOG.info("Spawnsight loaded; config in {}", STORE.dir());
 	}
 
 	private static void tick(Minecraft mc) {
+		SelfTest.tick(mc);
 		while (overlayKey.consumeClick()) {
 			toggleOverlay(mc);
 		}
