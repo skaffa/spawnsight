@@ -188,11 +188,42 @@ public final class RuleEngine {
 				never(() -> "difficulty is peaceful");
 			}
 			predicate();
+			if (!explain) {
+				// fast mode: only the status counts, so the cheap light chances go before the costly
+				// hitbox and liquid scans (the order changes no result, only which reason is first)
+				walk();
+				if (unknown == null && impossible()) {
+					never(null);
+				}
+				boxFits();
+				obstruction();
+				return;
+			}
+			boxFits();
+			walk();
+			obstruction();
+		}
+
+		void boxFits() {
 			if (!w.spawnBoxFree(m, x, y, z)) {
 				never(() -> String.format(Locale.ROOT, "no room for the %s (%.2f wide, %.2f high)", m.shortName(), m.spawnWidth(), m.spawnHeight()));
 			}
-			walk();
-			obstruction();
+		}
+
+		/** The chance factors so far are zero in every situation. */
+		boolean impossible() {
+			if (factors.isEmpty()) {
+				return false;
+			}
+			if (chance(e.now()) > 0) {
+				return false;
+			}
+			for (Scenario s : e.later()) {
+				if (chance(s) > 0) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		void placement() {

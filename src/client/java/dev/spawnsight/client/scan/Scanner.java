@@ -46,6 +46,8 @@ public final class Scanner {
 		boolean dirty;
 		/** Increased on every dirty mark, so a job that started before the mark does not clear it. */
 		int dirtyStamp;
+		/** Scanner tick of the last block/light dirty mark: wait a few ticks for more (chunk and light loading). */
+		long dirtyAt = Long.MIN_VALUE / 2;
 		int candidates;
 		int[] counts = new int[SpotEvaluator.Shade.values().length];
 		/** Increased on every recompute; the renderer rebuilds its mesh when this changes. */
@@ -68,6 +70,11 @@ public final class Scanner {
 	private static Env lastEnv;
 	private static String lastSettings;
 	private static LevelWorld world;
+	/** Ticks since start, for the dirty debounce. */
+	private static long ticks;
+	/** Wait this many ticks after a block/light change before recomputing (more changes usually follow). */
+	private static final int DEBOUNCE_TICKS = 4;
+	private static final java.lang.management.ThreadMXBean CPU = java.lang.management.ManagementFactory.getThreadMXBean();
 
 	public static final Stats STATS = new Stats();
 
@@ -87,6 +94,11 @@ public final class Scanner {
 		public long lastFillNanos = -1;
 		long fillStart = -1;
 		public long candidates;
+		/** CPU time of the scanner thread (render thread) in scanner ticks, not wall time. */
+		public long cpuNanos;
+		public long maxTickCpuNanos;
+		/** Scanner ticks that did any work (for the average CPU per working tick). */
+		public long workTicks;
 
 		public void reset() {
 			sectionsComputed = 0;
@@ -94,6 +106,9 @@ public final class Scanner {
 			maxSectionNanos = 0;
 			maxTickNanos = 0;
 			candidates = 0;
+			cpuNanos = 0;
+			maxTickCpuNanos = 0;
+			workTicks = 0;
 		}
 	}
 
@@ -186,7 +201,9 @@ public final class Scanner {
 		if (!c.overlay) {
 			return;
 		}
+		ticks++;
 		long t0 = System.nanoTime();
+		long cpu0 = CPU.getCurrentThreadCpuTime();
 		table();
 		boolean sp = ServerLists.available();
 		Long seed = sp ? SERVER.seed() : null;
@@ -224,7 +241,7 @@ public final class Scanner {
 					long key = SectionPos.asLong(sx, sy, sz);
 					keep.add(key);
 					Section s = CACHE.get(key);
-					if (s == null || s.dirty) {
+					if (s == null || s.dirty && ticks - s.dirtyAt >= DEBOUNCE_TICKS) {
 						long dx = sx - scx;
 						long dy = sy - scy;
 						long dz = sz - scz;
@@ -264,9 +281,15 @@ public final class Scanner {
 				done++;
 			}
 		}
-		STATS.queue = Math.max(0, work.size() - done) + (job != null ? 1 : 0);
+		STATS.queue = Math.max(0, work.size() - done) + (job != null ? 1 : 0) + debouncing();
 		STATS.waitingForServer = waiting;
 		long took = System.nanoTime() - t0;
+		long cpu = CPU.getCurrentThreadCpuTime() - cpu0;
+		STATS.cpuNanos += cpu;
+		if (!work.isEmpty()) {
+			STATS.workTicks++;
+		}
+		STATS.maxTickCpuNanos = Math.max(STATS.maxTickCpuNanos, cpu);
 		STATS.lastTickNanos = took;
 		STATS.maxTickNanos = Math.max(STATS.maxTickNanos, took);
 		if (STATS.queue == 0 && STATS.fillStart >= 0) {
@@ -301,6 +324,7 @@ public final class Scanner {
 			Section s = CACHE.get(k);
 			if (s != null) {
 				dirty(s);
+				s.dirtyAt = ticks;
 			}
 			if (nether) {
 				SERVER.forget(k); // the fortress rule depends on nether bricks below
@@ -450,6 +474,16 @@ public final class Scanner {
 			}
 		}
 		return out;
+	}
+
+	private static int debouncing() {
+		int n = 0;
+		for (Section s : CACHE.values()) {
+			if (s.dirty && ticks - s.dirtyAt < DEBOUNCE_TICKS) {
+				n++;
+			}
+		}
+		return n;
 	}
 
 	/** Counts of shades over all cached sections, for stats. */

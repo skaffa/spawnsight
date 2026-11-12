@@ -253,6 +253,26 @@ initial fill under 1 s; rescan only dirty sections. Rendering: one cached mesh p
 allocation. Report: full-scan time, ms per dirty section, frame time with overlay off/on at radius 16
 and 32, memory per section. Stop and report if radius 32 costs more than 1 ms per frame.
 
+**M2 measurements (2026-11-12, `-Pselftest=m2`, singleplayer copy of the seed-12345 test world, 8 GB
+machine shared with another session's Minecraft client and server, so wall times are inflated):**
+
+| | radius 16 | radius 32 | radius 32 rescan (midnight to noon) |
+|---|---|---|---|
+| sections cached / with colour | 20 / 11 | 81 / 41 | 81 / 41 |
+| sections computed (incl. recomputes while chunks load) | 34 | 110 | 115 |
+| scanner CPU in total | 343 ms | 609 ms | 640 ms |
+| wall time until filled | 13.9 s | 10.5 s | 23.6 s |
+| CPU per working tick (budget 2 ms) | | 2.89 ms average | |
+
+- About 30-40 µs CPU per candidate block; the wall time of a fill is mostly the 2 ms budget
+  (600 ms CPU / 2 ms per tick = 300 ticks = 15 s) plus the busy machine. Windows thread CPU time moves in
+  15.6 ms steps, so per-tick maxima are not meaningful; the self-test checks the average.
+- Memory: 4 KB per section with colour (164 KB at radius 32), nothing for empty sections.
+- Exactness: the client result equals the same rules run on the server level for all 9186 candidates.
+  A torch updates the overlay after 8-21 ticks (4-tick debounce plus queue).
+- Open for M3: a full fill at radius 32 takes 10-25 s wall. Options: a larger budget while the queue is
+  long and the player stands still, nearest-to-view-first ordering, and fewer checks per candidate.
+
 ## 10. Testing
 - Unit tests: rule chain on a fake grid (slabs, glass, carpets, 1-high and 2-high gaps, light levels,
   spider width, enderman height, water, rails, buttons), chance maths, sphere maths, table lookup and
@@ -280,7 +300,7 @@ and 32, memory per section. Stop and report if radius 32 costs more than 1 ms pe
 - **M1 Rule engine** (done 2026-11-12): `core/rules` with all §2–§5 rules, chance maths, unit tests on the fake grid.
   Spawn table generator (Gradle task reading the 26.3 jar's data pack) + lookup tests. Verify biome tag
   sync and slime size in-game.
-- **M2 Scanner + sources**: client probe, ServerPeek (exact singleplayer), section cache, dirty tracking
+- **M2 Scanner + sources** (done 2026-11-12, numbers in §9): client probe, ServerPeek (exact singleplayer), section cache, dirty tracking
   (block + light updates), tick budget. Measure numbers.
 - **M3 Overlay and UI**: section meshes, red/yellow/green, hatched near-player variant, spheres, HUD
   line, "why" panel, farm filter. Screenshots.

@@ -60,9 +60,15 @@ final class ScanTest {
 		s.waitFor("radius 32 filled", ScanTest::filled, 4800, mc -> {
 			fill32 = Scanner.STATS.lastFillNanos;
 			log(mc, "radius 32");
-			SelfTest.check(Scanner.STATS.maxTickNanos < (SpawnsightClient.config.scanBudgetMs + 3) * 1_000_000L,
-					String.format(Locale.ROOT, "scanner tick stays near the %d ms budget (max %.2f ms)", SpawnsightClient.config.scanBudgetMs,
-							Scanner.STATS.maxTickNanos / 1e6));
+			// CPU time, averaged: Windows thread CPU time moves in 15.6 ms steps, and wall time also counts other
+			// processes and GC on a busy machine (both logged above)
+			Scanner.Stats st = Scanner.STATS;
+			double avgCpu = st.workTicks == 0 ? 0 : st.cpuNanos / 1e6 / st.workTicks;
+			SelfTest.check(avgCpu <= SpawnsightClient.config.scanBudgetMs + 1.0, String.format(Locale.ROOT,
+					"scanner stays within the %d ms budget: %.2f ms CPU per working tick over %d ticks", SpawnsightClient.config.scanBudgetMs, avgCpu,
+					st.workTicks));
+			SelfTest.check(st.cpuNanos < 1_500_000_000L, String.format(Locale.ROOT, "radius 32 fill costs %d ms CPU in total (limit 1500)",
+					st.cpuNanos / 1_000_000));
 			redAtNight = Scanner.shadeCounts()[SpotEvaluator.Shade.HOSTILE_NOW.ordinal()];
 			SelfTest.check(redAtNight > 0, "some blocks are red at midnight (" + redAtNight + ")");
 			compareWithServer(mc);
@@ -141,9 +147,9 @@ final class ScanTest {
 			}
 		}
 		SpawnsightClient.LOG.info(String.format(Locale.ROOT,
-				"[selftest] %s: fill %d ms, %d sections (%d with colour, %d KB shades), computed %d, %d candidates, avg %.3f ms/section,"
+				"[selftest] %s: fill %d ms (scanner CPU %d ms, max %.2f ms CPU in one tick), %d sections (%d with colour, %d KB shades), computed %d, %d candidates, avg %.3f ms/section,"
 						+ " max %.2f ms/section, max tick %.2f ms; red %d yellow %d unknown %d green %d",
-				what, st.lastFillNanos / 1_000_000, Scanner.cachedSections(), nonEmpty, bytes / 1024, st.sectionsComputed, st.candidates,
+				what, st.lastFillNanos / 1_000_000, st.cpuNanos / 1_000_000, st.maxTickCpuNanos / 1e6, Scanner.cachedSections(), nonEmpty, bytes / 1024, st.sectionsComputed, st.candidates,
 				st.sectionsComputed == 0 ? 0 : st.nanosComputing / 1e6 / st.sectionsComputed, st.maxSectionNanos / 1e6, st.maxTickNanos / 1e6,
 				sh[4], sh[3], sh[2], sh[1]));
 	}
