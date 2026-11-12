@@ -10,7 +10,8 @@ import net.minecraft.core.BlockPos;
  * <pre>
  *   floor y 199: bottom slabs | top slabs | glass          (z +2..+3)
  *   on the floor: carpets     | rails     | stone buttons  (z +6..+7)
- *   1-high gap under a lowered ceiling (x +2..+5, z +10..+12), redstone torch (light 7) in the corner (+12, +12)
+ *   1-high gap under a lowered ceiling (x +2..+5, z +10..+12); 2-high corridor, 1 wide, along z +11 (x +7..+13);
+ *   redstone torch (light 7) at (+12, +4)
  * </pre>
  */
 final class DemoRig {
@@ -38,7 +39,11 @@ final class DemoRig {
 		cmd(mc, fill(x + 6, Y + 1, z + 6, x + 8, Y + 1, z + 7, "rail"));
 		cmd(mc, fill(x + 10, Y + 1, z + 6, x + 12, Y + 1, z + 7, "stone_button[face=floor]"));
 		cmd(mc, fill(x + 2, Y + 2, z + 10, x + 5, Y + 4, z + 12, "stone"));
-		cmd(mc, "setblock " + (x + 12) + " " + (Y + 1) + " " + (z + 12) + " redstone_torch");
+		// 2 high (no endermen) with a 1-wide corridor along z + 11 (no spiders)
+		cmd(mc, fill(x + 7, Y + 3, z + 10, x + 13, Y + 4, z + 12, "stone"));
+		cmd(mc, fill(x + 7, Y + 1, z + 10, x + 13, Y + 2, z + 10, "stone"));
+		cmd(mc, fill(x + 7, Y + 1, z + 12, x + 13, Y + 2, z + 12, "stone"));
+		cmd(mc, "setblock " + (x + 12) + " " + (Y + 1) + " " + (z + 4) + " redstone_torch");
 		cmd(mc, "kill @e[type=!player]");
 	}
 
@@ -54,6 +59,11 @@ final class DemoRig {
 
 	private static String fill(int x0, int y0, int z0, int x1, int y1, int z1, String block) {
 		return "fill " + x0 + " " + y0 + " " + z0 + " " + x1 + " " + y1 + " " + z1 + " " + block;
+	}
+
+	/** Inclusive bounds of everything the rig touches: {minX, minY, minZ, maxX, maxY, maxZ}. */
+	static int[] bounds(BlockPos o) {
+		return new int[] {o.getX() - 3, Y, o.getZ() - 3, o.getX() + 32, Y + 7, o.getZ() + 17};
 	}
 
 	static void cmd(Minecraft mc, String command) {

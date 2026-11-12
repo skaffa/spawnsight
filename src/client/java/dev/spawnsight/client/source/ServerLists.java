@@ -178,6 +178,27 @@ public final class ServerLists {
 		});
 	}
 
+	/** The exact lists at one block, on the server thread (self-tests). Indexed by {@link Category#ordinal()}. */
+	@SuppressWarnings("unchecked")
+	public static List<SpawnEntry>[] listsAt(ServerLevel level, BlockPos p) {
+		StructureManager structures = level.structureManager();
+		ChunkGenerator generator = level.getChunkSource().getGenerator();
+		List<SpawnEntry>[] a = new List[Category.values().length];
+		for (MobCategory c : CATS) {
+			WeightedList<MobSpawnSettings.SpawnerData> l = c == MobCategory.MISC ? WeightedList.of()
+					: NaturalSpawner.isInNetherFortressBounds(p, level, c, structures) ? NetherFortressStructure.FORTRESS_ENEMIES
+							: generator.getMobsAt(level, structures, c, p);
+			List<SpawnEntry> out = new ArrayList<>();
+			for (Weighted<MobSpawnSettings.SpawnerData> w : l.unwrap()) {
+				MobSpawnSettings.SpawnerData d = w.value();
+				out.add(new SpawnEntry(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(d.type()).toString(), w.weight(),
+						d.count().minInclusive(), d.count().maxInclusive()));
+			}
+			a[Category.valueOf(c.name()).ordinal()] = out;
+		}
+		return a;
+	}
+
 	/** Identity wrapper so equal-content lists from different sources are still told apart. */
 	private record IdentityKey(Object o) {
 		@Override

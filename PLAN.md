@@ -314,7 +314,9 @@ again on an idle machine (M5), with per-section frustum culling or cached GPU bu
   by server address; the fortress list is assumed on nether bricks in the nether; HUD tag "[vanilla tables]",
   panel notes and a chat note on join): TableSource, `/spawnsight seed`, uncertainty labels, fortress heuristic; test on
   run-server.
-- **M5 Self-test**: rig, exact comparison, natural-spawn check, table-mode check; all PASS.
+- **M5 Self-test** (done 2026-11-12, `-Pselftest=m5`: 930 rig blocks, 13950 block/mob pairs, 5783 possible
+  now, 600 vanilla random draws each: 0 mismatches; table mode 0 differ; 13 natural spawns in 10 sprints of 600
+  ticks, all on blocks Spawnsight marked "now"): rig, exact comparison, natural-spawn check, table-mode check; all PASS.
 - **M6 Release prep**: README, CHANGELOG, `media/modrinth-description.md`, gallery 1600x900 +
   `captions.md`, icon. Ask before creating the GitHub repo, pushing, tagging.
 

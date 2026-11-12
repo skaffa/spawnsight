@@ -68,6 +68,9 @@ public final class SelfTest {
 		SpawnsightClient.LOG.info("[selftest] mode {}", MODE);
 		if (MODE.equals("m1")) {
 			m1();
+		} else if (MODE.equals("m5")) {
+			RigTest.steps(new Script());
+			step("end", 5, SelfTest::finish);
 		} else if (MODE.equals("m4")) {
 			ServerTest.steps(new Script());
 			step("end", 5, SelfTest::finish);
