@@ -52,6 +52,11 @@ final class DemoRig {
 		return String.format("tp SpawnTester %.1f %.1f %.1f -45 38", o.getX() + 1.3, Y + 3.2, o.getZ() + 1.3);
 	}
 
+	/** Close camera inside the room, looking north-down at a bottom slab (within reach, so the HUD has a target). */
+	static String whyCamera(BlockPos o) {
+		return String.format("tp SpawnTester %.1f %d %.1f 180 50", o.getX() + 3.5, Y + 2, o.getZ() + 5.5);
+	}
+
 	/** Camera east of the room above the grass, looking west at the room and the platform. */
 	static String outsideCamera(BlockPos o) {
 		return String.format("tp SpawnTester %.1f %.1f %.1f 70 28", o.getX() + 30.0, Y + 9.0, o.getZ() + 12.0);

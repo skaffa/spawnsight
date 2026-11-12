@@ -40,8 +40,7 @@ final class ShotsTest {
 			DemoRig.build(mc, origin);
 		});
 		s.step("camera in the dark room", 40, mc -> server(mc, DemoRig.insideCamera(origin)));
-		s.step("settle", 60, mc -> {
-		});
+		s.step("settle", 60, mc -> server(mc, DemoRig.insideCamera(origin))); // again: creative mode had not arrived for the first tp
 		s.waitFor("night overlay filled", ShotsTest::filled, 6000, mc -> {
 		});
 		s.step("night shot", 40, mc -> {
@@ -51,6 +50,7 @@ final class ShotsTest {
 			OverlayRenderer.drawNanos = 0;
 			OverlayRenderer.drawFrames = 0;
 			SpawnHud.panel = true;
+			server(mc, DemoRig.whyCamera(origin));
 		});
 		s.step("why shot", 40, mc -> {
 			shot(mc, "spawnsight-why.png");
