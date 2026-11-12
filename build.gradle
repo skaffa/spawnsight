@@ -20,6 +20,10 @@ loom {
 			if (project.hasProperty("selftest")) {
 				property "spawnsight.selftest", project.property("selftest").toString()
 			}
+			// ./gradlew runClient -Pjfr: Java Flight Recorder profile to run/spawnsight.jfr
+			if (project.hasProperty("jfr")) {
+				vmArgs "-XX:StartFlightRecording=filename=spawnsight.jfr,settings=profile"
+			}
 		}
 		server {
 			// Separate folder so the test server does not share worlds or configs with the client.

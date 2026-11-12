@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 
 /**
@@ -27,13 +28,24 @@ public final class RuleEngine {
 	private RuleEngine() {
 	}
 
+	/** Full evaluation with reasons and notes (the "why" panel). */
 	public static Verdict evaluate(World w, Env e, MobSpec m, int x, int y, int z) {
-		return new Run(w, e, m, MobRules.get(m.id()), x, y, z).run();
+		return new Run(w, e, m, MobRules.get(m.id()), x, y, z, true).run();
 	}
 
 	public static Verdict evaluate(World w, Env e, MobSpec m, MobRule r, int x, int y, int z) {
-		return new Run(w, e, m, r, x, y, z).run();
+		return new Run(w, e, m, r, x, y, z, true).run();
 	}
+
+	/**
+	 * Fast evaluation for the scanner: same status and chances, but {@link Verdict#reason()} is null and
+	 * there are no notes, so no text is built.
+	 */
+	public static Verdict status(World w, Env e, MobSpec m, int x, int y, int z) {
+		return new Run(w, e, m, MobRules.get(m.id()), x, y, z, false).run();
+	}
+
+	private static final Never FAST_NEVER = new Never("never");
 
 	private record Factor(ToDoubleFunction<Scenario> p, Function<Scenario, String> whyZero) {
 	}
@@ -51,12 +63,14 @@ public final class RuleEngine {
 		final MobSpec m;
 		final MobRule r;
 		final int x, y, z;
+		final boolean explain;
 		final List<Factor> factors = new ArrayList<>();
 		final List<String> notes = new ArrayList<>();
 		/** Set when a factor depends on unknown data; the message says what. */
 		String unknown;
 
-		Run(World w, Env e, MobSpec m, MobRule r, int x, int y, int z) {
+		Run(World w, Env e, MobSpec m, MobRule r, int x, int y, int z, boolean explain) {
+			this.explain = explain;
 			this.w = w;
 			this.e = e;
 			this.m = m;
@@ -84,16 +98,17 @@ public final class RuleEngine {
 			}
 			if (best > 0) {
 				Status st = now > 0 ? Status.NOW : Status.LATER;
-				String summary = now > 0 ? "can spawn now (" + pct(now) + " per attempt)" : "can spawn " + when + " (" + pct(best) + " per attempt)";
+				String summary = !explain ? null
+						: now > 0 ? "can spawn now (" + pct(now) + " per attempt)" : "can spawn " + when + " (" + pct(best) + " per attempt)";
 				if (unknown != null) {
-					notes.add(unknown);
+					note(unknown);
 				}
 				return new Verdict(m, st, now, best, when, summary, List.copyOf(notes));
 			}
 			if (unknown != null) {
 				return new Verdict(m, Status.UNKNOWN, 0, 0, null, unknown, List.copyOf(notes));
 			}
-			return new Verdict(m, Status.NEVER, 0, 0, null, zeroReason(), List.copyOf(notes));
+			return new Verdict(m, Status.NEVER, 0, 0, null, explain ? zeroReason() : null, List.copyOf(notes));
 		}
 
 		double chance(Scenario s) {
@@ -128,8 +143,14 @@ public final class RuleEngine {
 			return byFactor.isEmpty() ? "never" : byFactor.values().iterator().next();
 		}
 
-		void never(String reason) {
-			throw new Never(reason);
+		void never(Supplier<String> reason) {
+			throw explain ? new Never(reason.get()) : FAST_NEVER;
+		}
+
+		void note(String what) {
+			if (explain) {
+				notes.add(what);
+			}
 		}
 
 		void factor(ToDoubleFunction<Scenario> p, Function<Scenario, String> whyZero) {
@@ -137,7 +158,7 @@ public final class RuleEngine {
 		}
 
 		void constant(double p, String what) {
-			notes.add(what);
+			note(what);
 			factor(s -> p, s -> what);
 		}
 
@@ -157,18 +178,18 @@ public final class RuleEngine {
 
 		void gates() {
 			if (m.category() == Category.MISC) {
-				never(m.shortName() + " is not a natural spawn (misc category)");
+				never(() -> m.shortName() + " is not a natural spawn (misc category)");
 			}
 			if (!m.canSummon()) {
-				never(m.shortName() + " cannot be summoned");
+				never(() -> m.shortName() + " cannot be summoned");
 			}
 			placement();
 			if (!m.allowedInPeaceful() && e.peaceful()) {
-				never("difficulty is peaceful");
+				never(() -> "difficulty is peaceful");
 			}
 			predicate();
 			if (!w.spawnBoxFree(m, x, y, z)) {
-				never(String.format(Locale.ROOT, "no room for the %s (%.2f wide, %.2f high)", m.shortName(), m.spawnWidth(), m.spawnHeight()));
+				never(() -> String.format(Locale.ROOT, "no room for the %s (%.2f wide, %.2f high)", m.shortName(), m.spawnWidth(), m.spawnHeight()));
 			}
 			walk();
 			obstruction();
@@ -178,35 +199,35 @@ public final class RuleEngine {
 			switch (r.placement()) {
 				case ON_GROUND -> {
 					if (!w.insideBorder(x, y, z)) {
-						never("outside the world border");
+						never(() -> "outside the world border");
 					}
 					switch (w.floor(x, y - 1, z, m)) {
 						case OK -> {
 						}
-						case NOT_STURDY -> never(name(-1) + ": top face is not solid, not a spawn floor");
-						case EMITS_LIGHT -> never(name(-1) + " gives light 14 or more, not a spawn floor");
-						case BLOCK_RULE -> never(name(-1) + " is never a spawn floor for " + m.shortName());
+						case NOT_STURDY -> never(() -> name(-1) + ": top face is not solid, not a spawn floor");
+						case EMITS_LIGHT -> never(() -> name(-1) + " gives light 14 or more, not a spawn floor");
+						case BLOCK_RULE -> never(() -> name(-1) + " is never a spawn floor for " + m.shortName());
 					}
 					space(0);
 					space(1);
 				}
 				case IN_WATER -> {
 					if (!w.insideBorder(x, y, z)) {
-						never("outside the world border");
+						never(() -> "outside the world border");
 					}
 					if (!w.water(x, y, z)) {
-						never(m.shortName() + " spawns only in water");
+						never(() -> m.shortName() + " spawns only in water");
 					}
 					if (w.conductor(x, y + 1, z)) {
-						never(name(1) + " right above the water");
+						never(() -> name(1) + " right above the water");
 					}
 				}
 				case IN_LAVA -> {
 					if (!w.insideBorder(x, y, z)) {
-						never("outside the world border");
+						never(() -> "outside the world border");
 					}
 					if (!w.lava(x, y, z)) {
-						never(m.shortName() + " spawns only in lava");
+						never(() -> m.shortName() + " spawns only in lava");
 					}
 				}
 				case NO_RESTRICTIONS -> {
@@ -219,31 +240,31 @@ public final class RuleEngine {
 			switch (w.space(x, y + dy, z, m)) {
 				case OK -> {
 				}
-				case FULL_BLOCK -> never(dy == 0 ? name(0) + " fills the block" : "only 1 block of space: " + name(1) + " above, mobs need 2");
-				case SIGNAL_SOURCE -> never(name(dy) + where + " is a redstone component: no spawning inside");
-				case FLUID -> never(name(dy) + where + " holds a fluid: no spawning inside");
-				case NO_SPAWN_INSIDE -> never(name(dy) + where + " prevents spawning inside (rails)");
-				case DANGEROUS -> never(name(dy) + where + " would hurt the " + m.shortName());
+				case FULL_BLOCK -> never(() -> dy == 0 ? name(0) + " fills the block" : "only 1 block of space: " + name(1) + " above, mobs need 2");
+				case SIGNAL_SOURCE -> never(() -> name(dy) + where + " is a redstone component: no spawning inside");
+				case FLUID -> never(() -> name(dy) + where + " holds a fluid: no spawning inside");
+				case NO_SPAWN_INSIDE -> never(() -> name(dy) + where + " prevents spawning inside (rails)");
+				case DANGEROUS -> never(() -> name(dy) + where + " would hurt the " + m.shortName());
 			}
 		}
 
 		void floorValid() {
 			World.Floor f = w.floor(x, y - 1, z, m);
 			if (f != World.Floor.OK) {
-				never(name(-1) + " is not a valid spawn floor for " + m.shortName());
+				never(() -> name(-1) + " is not a valid spawn floor for " + m.shortName());
 			}
 		}
 
 		void floorTag(String tag) {
 			if (!w.is(x, y - 1, z, tag)) {
-				never(m.shortName() + " needs a floor in " + tag + ", not " + name(-1));
+				never(() -> m.shortName() + " needs a floor in " + tag + ", not " + name(-1));
 			}
 		}
 
 		void blockLightLimit() {
 			int limit = e.dimension().blockLightLimit();
 			if (limit < 15 && blk() > limit) {
-				never("block light " + blk() + " > " + limit + ": monsters need " + limit);
+				never(() -> "block light " + blk() + " > " + limit + ": monsters need " + limit);
 			}
 		}
 
@@ -261,7 +282,7 @@ public final class RuleEngine {
 		void brightAtNoon() {
 			int raw0 = Light.raw(sky(), blk(), 0);
 			if (raw0 <= 8) {
-				never("too dark: light " + raw0 + " at noon, " + m.shortName() + " needs 9 or more");
+				never(() -> "too dark: light " + raw0 + " at noon, " + m.shortName() + " needs 9 or more");
 			}
 		}
 
@@ -281,7 +302,7 @@ public final class RuleEngine {
 					darkFactor();
 					floorValid();
 					if (!w.canSeeSky(x, y, z)) {
-						never(m.shortName() + " needs open sky above");
+						never(() -> m.shortName() + " needs open sky above");
 					}
 				}
 				case STRAY -> {
@@ -293,19 +314,19 @@ public final class RuleEngine {
 						top++;
 					}
 					if (!w.canSeeSky(x, top - 1, z)) {
-						never("stray needs open sky above (powder snow is allowed)");
+						never(() -> "stray needs open sky above (powder snow is allowed)");
 					}
 				}
 				case PATROLLING -> {
 					if (blk() > 8) {
-						never("block light " + blk() + " > 8: pillagers need 8 or less");
+						never(() -> "block light " + blk() + " > 8: pillagers need 8 or less");
 					}
 					floorValid();
 				}
 				case DROWNED -> drowned();
 				case GUARDIAN -> {
 					if (!w.water(x, y - 1, z)) {
-						never("guardians need water below");
+						never(() -> "guardians need water below");
 					}
 					if (w.canSeeSkyFromBelowWater(x, y, z)) {
 						constant(1 / 20.0, "sees the sky through the water: 1 in 20");
@@ -318,12 +339,12 @@ public final class RuleEngine {
 				}
 				case ZOMBIFIED_PIGLIN, NOT_ON_WART -> {
 					if (w.is(x, y - 1, z, "minecraft:nether_wart_block")) {
-						never(m.shortName() + " never spawns on nether wart blocks");
+						never(() -> m.shortName() + " never spawns on nether wart blocks");
 					}
 				}
 				case NO_PLAYER_NEAR -> {
 					floorValid();
-					notes.add("only when no player is within 5 blocks");
+					note("only when no player is within 5 blocks");
 				}
 				case STRIDER -> {
 					int top = y + 1;
@@ -331,7 +352,8 @@ public final class RuleEngine {
 						top++;
 					}
 					if (!w.air(x, top, z)) {
-						never("striders need air above the lava (" + w.name(x, top, z) + ")");
+						int above = top;
+						never(() -> "striders need air above the lava (" + w.name(x, above, z) + ")");
 					}
 				}
 				case ANIMAL -> {
@@ -350,7 +372,7 @@ public final class RuleEngine {
 				}
 				case TURTLE -> {
 					if (y >= e.seaLevel() + 4) {
-						never("turtles spawn below sea level + 4 (y < " + (e.seaLevel() + 4) + ")");
+						never(() -> "turtles spawn below sea level + 4 (y < " + (e.seaLevel() + 4) + ")");
 					}
 					floorTag(SAND);
 					brightAtNoon();
@@ -366,13 +388,13 @@ public final class RuleEngine {
 				}
 				case GLOW_SQUID -> {
 					if (y > e.seaLevel() - 33) {
-						never("glow squid spawn at y ≤ " + (e.seaLevel() - 33));
+						never(() -> "glow squid spawn at y ≤ " + (e.seaLevel() - 33));
 					}
 					if (Light.raw(sky(), blk(), 0) != 0) {
-						never("glow squid need light 0");
+						never(() -> "glow squid need light 0");
 					}
 					if (!w.waterBlock(x, y, z)) {
-						never("glow squid need a water block");
+						never(() -> "glow squid need a water block");
 					}
 				}
 			}
@@ -380,7 +402,7 @@ public final class RuleEngine {
 
 		void drowned() {
 			if (!w.water(x, y - 1, z)) {
-				never("drowned need water below");
+				never(() -> "drowned need water below");
 			}
 			blockLightLimit();
 			darkFactor();
@@ -388,7 +410,7 @@ public final class RuleEngine {
 				constant(1 / 15.0, "river biome: 1 in 15");
 			} else {
 				if (y >= e.seaLevel() - 5) {
-					never("drowned outside rivers spawn below y " + (e.seaLevel() - 5));
+					never(() -> "drowned outside rivers spawn below y " + (e.seaLevel() - 5));
 				}
 				constant(1 / 40.0, "1 in 40 outside rivers");
 			}
@@ -404,7 +426,7 @@ public final class RuleEngine {
 			}
 			if (!swampBand && pc == 0) {
 				if (unknown == null) {
-					never(chunkBand ? "slime: not a slime chunk, and not a swamp at y 51-69" : "slime: needs a slime chunk below y 40 or a swamp at y 51-69");
+					never(() -> chunkBand ? "slime: not a slime chunk, and not a swamp at y 51-69" : "slime: needs a slime chunk below y 40 or a swamp at y 51-69");
 				}
 			}
 			int sky = sky();
@@ -418,16 +440,16 @@ public final class RuleEngine {
 				return ps + (1 - ps) * pc;
 			}, s -> swampBand ? "swamp slime: too bright or wrong moon phase " + s.name() : "slime: not a slime chunk");
 			if (swampBand) {
-				notes.add("swamp slimes: more at full moon, none at new moon");
+				note("swamp slimes: more at full moon, none at new moon");
 			}
 			if (pc > 0) {
-				notes.add("slime chunk: 1 in 10");
+				note("slime chunk: 1 in 10");
 			}
 		}
 
 		void bat() {
 			if (y >= w.worldSurface(x, z)) {
-				never("bats spawn only below the surface");
+				never(() -> "bats spawn only below the surface");
 			}
 			int sky = sky();
 			int blk = blk();
@@ -438,10 +460,10 @@ public final class RuleEngine {
 
 		void waterAboveBelow() {
 			if (!w.water(x, y - 1, z)) {
-				never(m.shortName() + " needs water below");
+				never(() -> m.shortName() + " needs water below");
 			}
 			if (!w.waterBlock(x, y + 1, z)) {
-				never(m.shortName() + " needs a water block above");
+				never(() -> m.shortName() + " needs a water block above");
 			}
 		}
 
@@ -449,7 +471,7 @@ public final class RuleEngine {
 			int lo = e.seaLevel() + low;
 			int hi = e.seaLevel() + high;
 			if (y < lo || y > hi) {
-				never(m.shortName() + " spawns at y " + lo + " to " + hi);
+				never(() -> m.shortName() + " spawns at y " + lo + " to " + hi);
 			}
 		}
 
@@ -465,7 +487,7 @@ public final class RuleEngine {
 			switch (r.walk()) {
 				case NONE -> {
 				}
-				case HOGLIN -> notes.add("not near warped fungus, nether portals or respawn anchors (not checked)");
+				case HOGLIN -> note("not near warped fungus, nether portals or respawn anchors (not checked)");
 				case MONSTER -> monsterWalk(amb, sky, blk);
 				case SILVERFISH -> {
 					if (!w.is(x, y - 1, z, INFESTABLE)) {
@@ -511,22 +533,22 @@ public final class RuleEngine {
 				}
 				case NO_LIQUID -> {
 					if (w.liquidInBox(m, x, y, z)) {
-						never("water or lava inside the " + m.shortName() + "'s hitbox");
+						never(() -> "water or lava inside the " + m.shortName() + "'s hitbox");
 					}
 				}
 				case OCELOT -> {
 					if (w.liquidInBox(m, x, y, z)) {
-						never("water or lava inside the ocelot's hitbox");
+						never(() -> "water or lava inside the ocelot's hitbox");
 					}
 					if (y < e.seaLevel()) {
-						never("ocelots spawn at sea level or higher");
+						never(() -> "ocelots spawn at sea level or higher");
 					}
 					if (!w.is(x, y - 1, z, GRASS) && !w.is(x, y - 1, z, LEAVES)) {
-						never("ocelots need grass blocks or leaves below");
+						never(() -> "ocelots need grass blocks or leaves below");
 					}
 				}
 			}
-			notes.add("no entity may be in the way (not checked)");
+			note("no entity may be in the way (not checked)");
 		}
 	}
 

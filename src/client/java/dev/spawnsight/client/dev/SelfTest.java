@@ -68,6 +68,9 @@ public final class SelfTest {
 		SpawnsightClient.LOG.info("[selftest] mode {}", MODE);
 		if (MODE.equals("m1")) {
 			m1();
+		} else if (MODE.equals("m2")) {
+			ScanTest.steps(new Script());
+			step("end", 5, SelfTest::finish);
 		} else {
 			fail("unknown self-test mode " + MODE);
 			STEPS.add(new Step("end", 0, () -> true, 1, SelfTest::finish));
@@ -102,6 +105,17 @@ public final class SelfTest {
 		}
 		index++;
 		wait = 0;
+	}
+
+	/** Lets the per-milestone test classes add steps. */
+	static final class Script {
+		void step(String name, int delay, Consumer<Minecraft> action) {
+			SelfTest.step(name, delay, action);
+		}
+
+		void waitFor(String name, BooleanSupplier until, int timeout, Consumer<Minecraft> action) {
+			SelfTest.waitFor(name, until, timeout, action);
+		}
 	}
 
 	private static void step(String name, int delay, Consumer<Minecraft> action) {
