@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Keeps the overlay result for every 16³ section within the radius (PLAN.md §8–§9). A section is
+ * Keeps the overlay result for every 16³ section within the radius. A section is
  * computed once and again only when it is marked dirty (block or light change, via the renderer's own
  * dirty marks), when the {@link Env} changes (time, weather, moon, difficulty) or when settings change.
  * Work is spread over ticks with a time budget, nearest sections first. Client thread only.

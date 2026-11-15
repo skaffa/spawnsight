@@ -39,7 +39,7 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * M5 acceptance ({@code -Pselftest=m5}, singleplayer "SpawnTest"), PLAN.md §10:
+ * M5 acceptance ({@code -Pselftest=m5}, singleplayer "SpawnTest"):
  * <ol>
  * <li>Every candidate block of the demo rig and every mob in its spawn lists: Spawnsight's chance now
  * against vanilla's own checks ({@code SpawnPlacements.isSpawnPositionOk}, {@code checkSpawnRules} with

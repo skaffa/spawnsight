@@ -16,7 +16,7 @@ loom {
 		client {
 			// Keep the dev game small enough for 8 GB machines.
 			vmArgs "-Xms256M", "-Xmx2G"
-			// ./gradlew runClient -Pselftest=<mode>: scripted in-game test (PLAN.md §10)
+			// ./gradlew runClient -Pselftest=<mode>: scripted in-game test
 			if (project.hasProperty("selftest")) {
 				property "spawnsight.selftest", project.property("selftest").toString()
 			}
@@ -65,7 +65,7 @@ dependencies {
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
-// Vanilla spawn tables for servers (PLAN.md §7): read from the 26.3 game jar's built-in data pack by
+// Vanilla spawn tables for servers: read from the 26.3 game jar's built-in data pack by
 // core.table.SpawnTableBuilder (Minecraft-free core code, so it runs right after compileJava).
 def spawnTableDir = layout.buildDirectory.dir("generated/spawntable")
 def spawnTableFile = spawnTableDir.map { it.file("spawnsight/spawn_table.json") }

@@ -3,7 +3,7 @@ package dev.spawnsight.core.rules;
 /**
  * Minecraft-free view of the world around one candidate spawn block. Coordinates are block
  * coordinates; "pos" in the comments is the block the mob's feet would be in. On the client every
- * method calls the matching vanilla method (PLAN.md §8); tests use a fake grid.
+ * method calls the matching vanilla method; tests use a fake grid.
  */
 public interface World {
 	/** Result of {@code BlockState.isValidSpawn} on a floor block, with the reason when false. */

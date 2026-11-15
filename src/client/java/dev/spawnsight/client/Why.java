@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The "why" explanation for the block the player looks at (PLAN.md §6). The spawn position is the block
+ * The "why" explanation for the block the player looks at. The spawn position is the block
  * above the aimed block. Used by the HUD line, the panel (key I) and {@code /spawnsight why}.
  */
 public final class Why {

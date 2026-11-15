@@ -1,7 +1,7 @@
 package dev.spawnsight.core.config;
 
 /**
- * User settings, stored as {@code config/spawnsight/config.json}. See PLAN.md §6 and §8.
+ * User settings, stored as {@code config/spawnsight/config.json}.
  * Plain fields so Gson can (de)serialize them; call {@link #clamp()} after loading.
  */
 public final class SpawnsightConfig {

@@ -2,7 +2,7 @@ package dev.spawnsight.core.rules;
 
 /**
  * How one entity type is checked: its {@code SpawnPlacements} registration (placement type and spawn
- * predicate) plus the instance checks after creation (walk target, spawn obstruction). See PLAN.md §2–§3.
+ * predicate) plus the instance checks after creation (walk target, spawn obstruction).
  *
  * @param tag block tag for {@link Kind#ANIMAL} / {@link Kind#FLOOR_TAG} / {@link Kind#POLAR_BEAR}; band limits for
  *            {@link Kind#WATER_BAND} are in {@code bandLow}/{@code bandHigh} (relative to sea level)

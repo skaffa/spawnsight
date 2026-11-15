@@ -18,8 +18,8 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Draws the overlay: one flat square per block on the floor of the spawn position, coloured by shade
- * (PLAN.md §6). Blocks within 24 blocks of the player, where nothing spawns while you stand there, are
+ * Draws the overlay: one flat square per block on the floor of the spawn position, coloured by shade.
+ * Blocks within 24 blocks of the player, where nothing spawns while you stand there, are
  * drawn smaller and fainter so they read as "would spawn if you were away". Each section keeps
  * a compact list of its coloured blocks, rebuilt when the scanner recomputes it.
  */

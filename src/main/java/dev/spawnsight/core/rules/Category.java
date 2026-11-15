@@ -2,7 +2,7 @@ package dev.spawnsight.core.rules;
 
 import java.util.Locale;
 
-/** Vanilla 26.3 {@code MobCategory}: name, friendly flag and instant-despawn distance (PLAN.md §5). */
+/** Vanilla 26.3 {@code MobCategory}: name, friendly flag and instant-despawn distance. */
 public enum Category {
 	MONSTER(false, 128),
 	CREATURE(true, 128),

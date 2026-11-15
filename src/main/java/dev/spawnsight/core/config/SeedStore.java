@@ -18,7 +18,7 @@ import java.util.TreeMap;
 
 /**
  * World seeds the player entered for servers ({@code /spawnsight seed}), stored as
- * {@code config/spawnsight/seeds.json}: server address → seed. Used only for slime chunks (PLAN.md §7).
+ * {@code config/spawnsight/seeds.json}: server address → seed. Used only for slime chunks.
  * Minecraft-free so it can be unit tested.
  */
 public final class SeedStore {

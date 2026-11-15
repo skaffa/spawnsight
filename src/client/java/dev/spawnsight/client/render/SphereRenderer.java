@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 /**
- * The spawn and despawn spheres around the player's feet (PLAN.md §5): 24 (no spawning closer),
+ * The spawn and despawn spheres around the player's feet: 24 (no spawning closer),
  * 32 (random despawn beyond), 128 (instant despawn). Drawn with vanilla gizmos, collected every tick.
  */
 public final class SphereRenderer {

@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * The vanilla 26.3 {@code SpawnPlacements} table plus each class's walk-target and obstruction override,
- * read from the decompiled code (PLAN.md §3). Keyed by entity id.
+ * read from the decompiled code. Keyed by entity id.
  */
 public final class MobRules {
 	private static final Map<String, MobRule> RULES = new HashMap<>();

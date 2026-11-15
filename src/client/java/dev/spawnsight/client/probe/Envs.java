@@ -12,7 +12,7 @@ import net.minecraft.world.level.dimension.DimensionType;
 
 import java.util.List;
 
-/** Builds the {@link Env} for a level from what that level knows (PLAN.md §7). */
+/** Builds the {@link Env} for a level from what that level knows. */
 public final class Envs {
 	private Envs() {
 	}

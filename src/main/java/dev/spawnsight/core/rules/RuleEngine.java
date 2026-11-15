@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 
 /**
- * Evaluates the 26.3 natural-spawn checks for one mob on one block (PLAN.md §1–§4), in vanilla order:
+ * Evaluates the 26.3 natural-spawn checks for one mob on one block, in vanilla order:
  * category, placement type, peaceful, spawn predicate, spawn box, walk target, spawn obstruction.
  * Player distance, mob caps and the spawn list are handled by the caller.
  * <p>

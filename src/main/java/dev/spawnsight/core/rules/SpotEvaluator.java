@@ -9,8 +9,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Combines the verdicts of every mob in the spawn lists at one block into the overlay colour
- * (PLAN.md §6). Each distinct entity type is evaluated once even when it appears in several entries.
+ * Combines the verdicts of every mob in the spawn lists at one block into the overlay colour.
+ * Each distinct entity type is evaluated once even when it appears in several entries.
  */
 public final class SpotEvaluator {
 	private SpotEvaluator() {

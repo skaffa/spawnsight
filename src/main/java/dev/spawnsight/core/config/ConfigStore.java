@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * Loads and saves {@link SpawnsightConfig} inside the mod's own folder ({@code config/spawnsight/}).
  * Minecraft-free so it can be unit tested. A file that cannot be parsed is kept as
- * {@code config.json.broken-<time>} and defaults are used (PLAN.md §8).
+ * {@code config.json.broken-<time>} and defaults are used.
  */
 public final class ConfigStore {
 	public static final String FILE_NAME = "config.json";

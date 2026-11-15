@@ -38,7 +38,7 @@ import java.util.function.Consumer;
  * Dev-only scripted checks, enabled with {@code ./gradlew runClient -Pselftest=<mode>}. Logs every check,
  * then {@code SPAWNSIGHT SELFTEST PASS} or {@code FAIL} and quits.
  * <p>
- * Mode {@code m1} (PLAN.md §11 M1): compares core code with the real 26.3 classes (slime chunks,
+ * Mode {@code m1}: compares core code with the real 26.3 classes (slime chunks,
  * placement types, spawn table ids) and, on the test server, reads what the client really gets
  * (biome tags, sky darkening per weather, slime size). Start it with
  * {@code --quickPlayMultiplayer 127.0.0.1:25565}; the player must be op.

@@ -39,7 +39,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-/** Client entrypoint: config, keys, commands. The scanner and overlay arrive in M2/M3 (PLAN.md §11). */
+/** Client entrypoint: config, keys, commands. The scanner and overlay arrive in M2/M3. */
 public final class SpawnsightClient implements ClientModInitializer {
 	public static final String MOD_ID = "spawnsight";
 	public static final Logger LOG = LoggerFactory.getLogger("Spawnsight");

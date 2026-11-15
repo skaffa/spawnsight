@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Player-distance rules of 26.3 {@code NaturalSpawner} and {@code Mob.checkDespawn} (PLAN.md §5), and
+ * Player-distance rules of 26.3 {@code NaturalSpawner} and {@code Mob.checkDespawn}, and
  * the line segments for drawing the spheres.
  */
 public final class Spheres {

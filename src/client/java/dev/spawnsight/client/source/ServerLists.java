@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Exact spawn lists from the integrated server in singleplayer / LAN host (PLAN.md §7): the same lookup
+ * Exact spawn lists from the integrated server in singleplayer / LAN host: the same lookup
  * as {@code NaturalSpawner.mobsAt} (fortress rule, then {@code ChunkGenerator.getMobsAt} with structure
  * overrides, then {@code gameplay/natural_mob_spawns}). Runs on the server thread, one batch per client tick.
  */

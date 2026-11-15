@@ -29,8 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * {@link World} over a real {@link Level}: every method calls the vanilla method the rule is made of
- * (PLAN.md §8). Works on the client level and, in singleplayer, on the server level (self-test).
+ * {@link World} over a real {@link Level}: every method calls the vanilla method the rule is made of.
+ * Works on the client level and, in singleplayer, on the server level (self-test).
  * Not thread-safe: use one instance per thread.
  */
 public final class LevelWorld implements World {

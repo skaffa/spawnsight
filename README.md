@@ -1,4 +1,4 @@
-<p align="center"><img src="media/icon-128.png" alt="Spawnsight icon" width="96"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/skaffa/spawnsight/ee4cd77295623f7e314276fbbf880460872caf62/media/icon-128.png" alt="Spawnsight icon" width="96"></p>
 
 # Spawnsight
 
@@ -9,7 +9,7 @@ block, and which one?** It colours every block around you by what can spawn ther
 not for the block you look at, and draws the 24/32/128-block spawn and despawn spheres. Use it to
 spawn-proof a base or to design a mob farm.
 
-![The overlay in a dark room: red where monsters can spawn now, nothing on bottom slabs, glass, carpets, rails and buttons, green where only bats can spawn](media/gallery/1-overlay.png)
+![The overlay in a dark room: red where monsters can spawn now, nothing on bottom slabs, glass, carpets, rails and buttons, green where only bats can spawn](https://raw.githubusercontent.com/skaffa/spawnsight/ee4cd77295623f7e314276fbbf880460872caf62/media/gallery/1-overlay.png)
 
 ## What you see
 
@@ -33,7 +33,7 @@ instead.
 - **Farm mode**: `/spawnsight mob minecraft:enderman` shows only where that mob can spawn;
   `/spawnsight mob all` shows everything again.
 
-![The why panel: who can spawn on this block, with the chance per attempt or the reason why not](media/gallery/2-why.png)
+![The why panel: who can spawn on this block, with the chance per attempt or the reason why not](https://raw.githubusercontent.com/skaffa/spawnsight/ee4cd77295623f7e314276fbbf880460872caf62/media/gallery/2-why.png)
 
 ## How exact is it?
 
@@ -100,7 +100,7 @@ overlay needs about 4 KB per section that has colour.
 ## Building
 
 JDK 25. `./gradlew build` runs the unit tests and generates the vanilla spawn table from the game jar.
-Self-tests: `./gradlew runClient -Pselftest=m1|m2|m4|m5|shots` (see `PLAN.md` §10 for the worlds they use).
+Self-tests: `./gradlew runClient -Pselftest=m1|m2|m4|m5|shots`.
 
 ## License
 

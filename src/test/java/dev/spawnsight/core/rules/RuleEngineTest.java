@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/** Rule chain on a fake grid: the cases a spawn-proofer or farm builder meets (PLAN.md §10). */
+/** Rule chain on a fake grid: the cases a spawn-proofer or farm builder meets. */
 class RuleEngineTest {
 	static final Scenario DAY = new Scenario("now", 0, false);
 	static final Scenario NIGHT = new Scenario("now", 11, false);

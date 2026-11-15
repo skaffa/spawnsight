@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Spawn lists from the vanilla table by the biome the client sees (multiplayer, PLAN.md §7). Structure
+ * Spawn lists from the vanilla table by the biome the client sees (multiplayer). Structure
  * spawns are not known here.
  */
 public final class TableLists {

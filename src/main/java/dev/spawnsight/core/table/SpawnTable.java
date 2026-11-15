@@ -13,7 +13,7 @@ import java.util.TreeMap;
 /**
  * Vanilla spawn tables, generated at build time from the 26.3 data pack by {@link SpawnTableBuilder}
  * and shipped as {@code spawnsight/spawn_table.json}. Used on servers, where the client does not get
- * the biome spawn lists (PLAN.md §7). Plain fields for Gson.
+ * the biome spawn lists. Plain fields for Gson.
  */
 public final class SpawnTable {
 	public static final String RESOURCE = "/spawnsight/spawn_table.json";
